@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+	xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<body th:fragment="main-body">
+	<div id="adm_wrap">
+		<header>
+			<div class="head">
+				<a class="blog-header-logo text-dark" href="/post/main.do">Dish Inside</a>
+				<div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+    <a class="p-2 link-secondary" href="/post/notice.do">공지사항</a>
+  <a class="p-2 link-secondary" href="/post/bestview.do">Best 레시피</a>
+  <a class="p-2 link-secondary" href="/post/like.do">좋아한 레시피</a>
+  <a class="p-2 link-secondary" href="/post/mypost.do">나의 레시피</a>
+  <a class="p-2 link-secondary" href="/attendant.do">출석 체크</a>
+  <a class="p-2 link-secondary" href="/login.do" th:unless="${session.loginMember != null}">Sign In</a>
+  <div id="logoutButton" class="p-2 link-secondary nav-link" th:if="${session.loginMember != null}">Log out</div> 
+</nav>
+  </div>
+				<div th:if="${session.loginMember != null}" class="top_menu">
+					<div class="login_user">
+						<strong><i class="far fa-user-circle"></i> 
+							[[${session.loginMember.loginId} ]]</strong>님 반갑습니다.
+					</div>
+					<div class="logout">
+						<form action="/logout" method="post">
+							<button type="submit">
+								<span class="skip_info">로그아웃</span><i
+									class="fas fa-sign-out-alt"></i>
+							</button>
+						</form>
+					</div>
+				</div>
+			</div>
+		</header>
+
+		<div id="containers">
+
+
+
+
+			<!--/* 페이지별 컨텐츠 */-->
+			<th:block layout:fragment="content"></th:block>
+
+
+			<nav class="blog-pagination" aria-label="Pagination">
+				<a class="btn btn-outline-primary rounded-pill btn-circle" href="#">위로</a>
+			
+
+			</nav>
+			</div>
+			
+		</div>
+<script>
+  // 로그아웃 버튼을 클릭했을 때 호출되는 함수입니다.
+  function logout() {
+    // fetch를 사용하여 /logout 에 POST 요청을 보냅니다.
+    fetch('/logout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json', // POST 요청의 Content-Type을 JSON으로 설정합니다.
+      },
+    })
+    .then((response) => {
+      if (response.redirected) {
+        // 리다이렉트된 경우에만 새로운 URL로 이동합니다.
+        window.location.href = response.url;
+      } else {
+        // 리다이렉트되지 않은 경우에 대한 처리를 여기에 추가할 수 있습니다.
+        console.error('리다이렉트 실패');
+      }
+    })
+    .catch((error) => {
+      // 네트워크 오류 등 fetch 요청이 실패한 경우에 대한 처리를 여기에 추가할 수 있습니다.
+      console.error('네트워크 오류:', error);
+    });
+  }
+
+  // div 요소를 클릭하면 logout 함수를 호출하도록 이벤트 핸들러를 추가합니다.
+  document.getElementById('logoutButton').addEventListener('click', logout);
+</script>
+		
+		<script th:src="@{/js/jquery-3.6.0.min.js}"></script>
+		<script th:src="@{/js/common.js}"></script>
+		<script src="https://kit.fontawesome.com/79613ae794.js"
+			crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+<script type="text/javascript">
+/**
+ * 문자열의 마지막(끝) 문자의 종성 포함 여부 확인
+ * @param value - Target String
+ * @returns 종성 포함 여부
+ */
+function hasCoda(value) {
+    return ((value.charCodeAt(value.length - 1) - 0xAC00) % 28) > 0;
+}
+
+
+/**
+ * 필드(Elemenet) 유효성 검사
+ * @param target - 검사 대상 Element
+ * @param fieldName - 필드명
+ * @param focusTarget - 포커스 대상 Element
+ * @returns 필드 입력(선택) 여부
+ */
+function isValid(target, fieldName, focusTarget) {
+    if (target.value.trim()) {
+        return true;
+    }
+
+    const particle = (hasCoda(fieldName)) ? '을' : '를'; // 조사
+    const elementType = (target.type === 'text' || target.type === 'password' || target.type === 'search' || target.type === 'textarea') ? '입력' : '선택';
+    alert( `${fieldName + particle} ${elementType}해 주세요.` );
+
+    target.value = '';
+    ( !focusTarget ? target : focusTarget).focus();
+    throw new Error(`"${target.id}" is required...`)
+}
+
+
+/**
+ * 데이터 조회
+ * @param uri - API Request URI
+ * @param params - Parameters
+ * @returns json - 결과 데이터
+ */
+function getJson(uri, params) {
+
+    let json = {}
+
+    $.ajax({
+        url : uri,
+        type : 'get',
+        dataType : 'json',
+        data : params,
+        async : false,
+        success : function (response) {
+            json = response;
+        },
+        error : function (request, status, error) {
+            console.log(error)
+        }
+    })
+
+    return json;
+}
+
+
+/**
+ * 데이터 저장/수정/삭제
+ * @param uri - API Request URI
+ * @param method - API Request Method
+ * @param params - Parameters
+ * @returns json - 결과 데이터
+ */
+ function callApi(uri, method, params) {
+	    return new Promise((resolve, reject) => {
+	        $.ajax({
+	            url: uri,
+	            type: method,
+	            contentType: 'application/json; charset=utf-8',
+	            dataType: 'json',
+	            data: (params) ? JSON.stringify(params) : {},
+	            success: function (response) {
+	                resolve(response);
+	            },
+	            error: function (request, status, error) {
+	                reject(error);
+	            }
+	        });
+	    });
+	}
+</script>
+		<th:block layout:fragment="script"></th:block>
+</body>
+</html>

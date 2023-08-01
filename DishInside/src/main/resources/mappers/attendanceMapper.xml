@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dish.domain.attendance.AttendanceMapper">
+
+	<!-- attendance 테이블 전체 컬럼 -->
+    <sql id="attendanceColumns">
+          id
+        , member_id
+        , attendance_date
+    </sql>
+    
+    
+	<insert id="check" parameterType="com.dish.domain.attendance.AttendanceDto" useGeneratedKeys="true" keyProperty="id">
+   		INSERT INTO attendance (
+            <include refid="attendanceColumns" />
+        ) VALUES (	
+            #{id}
+            , #{memberId}
+            , NOW()            
+            )
+   
+   </insert>
+   
+   <!-- 출첵 확인 -->
+   <select id="monthCheck" parameterType="com.dish.domain.attendance.AttendanceDto" resultType="int">
+		SELECT
+            DAY(attendance_date) AS day
+        FROM
+        	attendance
+        where
+        	member_id = #{memberId}
+        	AND	YEAR(attendance_date) = #{year}
+        	AND MONTH(attendance_date) = #{month}
+        ORDER BY
+        	DAY(attendance_date)
+	 </select>
+	 
+	 <select id="beforeCheck" parameterType="com.dish.domain.attendance.AttendanceDto" resultType="int">
+		SELECT
+            count(id)
+        FROM
+        	attendance
+        where
+        	member_id = #{memberId}
+        	AND	YEAR(attendance_date) = #{year}
+        	AND MONTH(attendance_date) = #{month}
+        	AND DAY(attendance_date) = #{day}        	
+        
+	 </select>
+</mapper>

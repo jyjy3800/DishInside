@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.dish.domain.post.PostMapper">
+
+	<!-- post 테이블 전체 컬럼 -->
+	<sql id="postColumns">
+		id
+		, title
+		, content
+		, writer
+		, view_cnt
+		, notice_yn
+		, delete_yn
+		, created_date
+		, modified_date
+	</sql>
+
+
+	<!-- 게시글 검색 -->
+	<sql id="search">
+		<!-- 검색 키워드가 있을 때 -->
+		<if test="keyword != null and keyword != ''">
+			<choose>
+				<!-- 검색 유형이 있을 때 -->
+				<when test="searchType != null and searchType != ''">
+					<choose>
+						<when test="'title'.equals( searchType )">
+							AND title LIKE CONCAT('%', #{keyword}, '%')
+						</when>
+						<when test="'content'.equals( searchType )">
+							AND content LIKE CONCAT('%', #{keyword}, '%')
+						</when>
+						<when test="'writer'.equals( searchType )">
+							AND writer LIKE CONCAT('%', #{keyword}, '%')
+						</when>
+					</choose>
+				</when>
+
+				<!-- 전체 검색일 때 -->
+				<otherwise>
+					AND (
+					title LIKE CONCAT('%', #{keyword}, '%')
+					OR content
+					LIKE CONCAT('%', #{keyword}, '%')
+					OR writer LIKE CONCAT('%',
+					#{keyword}, '%')
+					)
+				</otherwise>
+			</choose>
+		</if>
+	</sql>
+
+
+	<!-- 게시글 저장 -->
+	<insert id="save"
+		parameterType="com.dish.domain.post.PostRequest"
+		useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO post (
+		<include refid="postColumns" />
+		) VALUES (
+		#{id}
+		, #{title}
+		, #{content}
+		, #{writer}
+		, 0
+		, #{noticeYn}
+		, 0
+		,NOW()
+		, NULL
+		)
+	</insert>
+
+
+	<!-- 게시글 상세정보 조회 -->
+	<select id="findById" parameterType="long"
+		resultType="com.dish.domain.post.PostResponse">
+		SELECT
+		<include refid="postColumns" />
+		FROM
+		post
+		WHERE
+		id = #{value} 
+	</select>
+
+
+	<update id="increaseViewCount" parameterType="long">
+		UPDATE post
+		SET
+		view_cnt = view_cnt + 1
+		WHERE id = #{value} 
+	</update>
+
+
+
+
+	<!-- 게시글 수정 -->
+	<update id="update"
+		parameterType="com.dish.domain.post.PostRequest">
+		UPDATE post
+		SET
+		modified_date = NOW()
+		, title = #{title}
+		,
+		content = #{content}
+		, writer = #{writer}
+		, notice_yn = #{noticeYn}
+		WHERE
+		id = #{id}
+	</update>
+
+
+	<!-- 게시글 삭제 -->
+	<delete id="deleteById" parameterType="long">
+		UPDATE post
+		SET
+		delete_yn =
+		1
+		WHERE
+		id = #{id}
+	</delete>
+
+
+	<!-- 게시글 리스트 조회 -->
+	<select id="findAll"
+		parameterType="com.dish.common.dto.SearchDto"
+		resultType="com.dish.domain.post.PostResponse">
+		SELECT
+		p.id,
+		p.title,
+		p.writer,
+		p.view_cnt,
+		p.notice_yn,
+		p.delete_yn,
+		p.created_date,
+		p.modified_date,
+		f.created_date
+		AS fileDate,
+		f.save_name,
+		(
+		SELECT COUNT(like_yn)
+		FROM liked
+		WHERE post_id
+		= p.id AND like_yn = 1
+		) AS likeCnt
+		FROM
+		post p
+		LEFT JOIN (
+		SELECT
+		post_id,
+		MIN(id) AS min_id
+		FROM
+		file
+		GROUP BY post_id
+		) AS f_min ON p.id =
+		f_min.post_id
+		LEFT JOIN file f ON
+		f_min.min_id = f.id
+		WHERE
+		p.notice_yn =
+		0
+		<include refid="search" />
+		AND p.delete_yn = 0
+		ORDER BY p.id DESC
+		LIMIT #{pagination.limitStart},
+		#{recordSize}
+	</select>
+	
+	<!-- 게시글 수 카운팅 -->
+	<select id="postCount"
+		parameterType="com.dish.common.dto.SearchDto" resultType="int">
+		SELECT
+		COUNT(*)
+		FROM
+		post
+		WHERE
+		notice_yn = 0 and delete_yn =0
+		<include refid="search" />
+	</select>
+	
+	<!-- 공지 사항 -->
+	<select id="findNotice"
+		parameterType="com.dish.common.dto.SearchDto"
+		resultType="com.dish.domain.post.PostResponse">
+		SELECT
+		p.id, p.title, p.content, p.writer, p.view_cnt,
+		p.notice_yn, p.delete_yn,
+		p.created_date, p.modified_date,
+		f.created_date as fileDate,
+		f.save_name, f.deleted_date
+		FROM
+		post p
+		LEFT
+		JOIN (
+		SELECT
+		post_id, MIN(id) AS min_id
+		FROM
+		file
+		GROUP BY post_id
+		) AS
+		f_min
+		ON
+		p.id = f_min.post_id
+
+		LEFT JOIN
+		file f
+		ON
+		f_min.min_id = f.id
+
+		WHERE
+		p.notice_yn = 1
+		<include refid="search" />
+		AND p.delete_yn = 0
+		order by p.id DESC
+		LIMIT
+		#{pagination.limitStart},
+		#{recordSize}
+	</select>
+	
+	<!-- 공지 수 카운팅 -->
+	<select id="noticeCount"
+		parameterType="com.dish.common.dto.SearchDto" resultType="int">
+		SELECT
+		COUNT(*)
+		FROM
+		post
+		WHERE
+		notice_yn = 1 and delete_yn =0
+		<include refid="search" />
+	</select>
+	
+	
+	<!-- 조회수 best20 -->
+	<select id="findBest"
+		parameterType="com.dish.common.dto.SearchDto"
+		resultType="com.dish.domain.post.PostResponse">
+		SELECT
+		p.id,
+		p.title,
+		p.content,
+		p.writer,
+		p.view_cnt,
+		p.notice_yn,
+		p.delete_yn,
+		p.created_date,
+		p.modified_date,
+		f.created_date
+		AS fileDate,
+		f.save_name,
+		(
+		SELECT COUNT(like_yn)
+		FROM liked
+		WHERE post_id
+		= p.id AND like_yn = 1
+		) AS likeCnt
+		FROM
+		post p
+		LEFT JOIN (
+		SELECT
+		post_id,
+		MIN(id) AS min_id
+		FROM
+		file
+		GROUP BY post_id
+		) AS f_min ON p.id =
+		f_min.post_id
+		LEFT JOIN file f ON
+		f_min.min_id = f.id
+		WHERE
+		p.notice_yn =
+		0
+		AND p.delete_yn = 0
+		ORDER BY
+		p.view_cnt DESC
+		LIMIT 0,20
+	</select>
+	
+	<!-- 좋아요수 best20 -->
+	<select id="findBestLike"
+		parameterType="com.dish.common.dto.SearchDto"
+		resultType="com.dish.domain.post.PostResponse">
+		SELECT
+    p.id,
+    p.title,
+    p.content,
+    p.writer,
+    p.view_cnt,
+    p.notice_yn,
+    p.delete_yn,
+    p.created_date,
+    p.modified_date,
+    f.created_date AS fileDate,
+    f.save_name,
+    (
+        SELECT COUNT(like_yn)
+        FROM liked
+        WHERE post_id = p.id AND like_yn = 1
+    ) AS likeCnt
+FROM
+    post p
+LEFT JOIN (
+    SELECT
+        post_id,
+        MIN(id) AS min_id
+    FROM
+        file
+    GROUP BY
+        post_id
+) AS f_min ON p.id = f_min.post_id
+LEFT JOIN file f ON f_min.min_id = f.id
+WHERE
+    p.notice_yn = 0 AND p.delete_yn = 0
+ORDER BY
+    likeCnt DESC, p.view_cnt DESC
+LIMIT 0, 20
+	</select>
+
+
+	<!-- 좋아요 누른 것만 보기 -->
+	<select id="findLike"		
+		parameterType="com.dish.common.dto.SearchDto"
+		resultType="com.dish.domain.post.PostResponse">
+		SELECT
+		p.id,
+		p.title,
+		p.content,
+		p.writer,
+		p.view_cnt,
+		p.notice_yn,
+		p.delete_yn,
+		p.created_date,
+		p.modified_date,
+		f.created_date AS fileDate,
+		f.save_name,
+		(
+		SELECT COUNT(like_yn)
+		FROM liked
+		WHERE post_id = p.id AND like_yn = 1
+		) AS likeCnt
+		FROM
+		post p
+		LEFT JOIN (
+		SELECT
+		post_id,
+		MIN(id) AS min_id
+		FROM
+		file
+		GROUP BY post_id
+		) AS f_min ON p.id = f_min.post_id
+		LEFT JOIN file f ON f_min.min_id = f.id
+		WHERE
+		p.notice_yn = 0
+		<include refid="search" />
+		AND p.delete_yn = 0
+		AND p.id IN (SELECT post_id FROM liked WHERE member_id = #{memberId} AND
+		like_yn = 1)
+		ORDER BY p.id DESC
+		LIMIT
+		#{pagination.limitStart},
+		#{recordSize}
+	</select>
+	
+	<!-- 좋아요 게시글 수 카운팅 -->
+	<select id="likeCount"
+		parameterType="com.dish.common.dto.SearchDto" resultType="int">
+		SELECT
+		COUNT(*)
+		FROM
+		post as p
+		WHERE
+		notice_yn = 0 and delete_yn =0 and p.id IN (SELECT post_id FROM liked WHERE member_id = #{memberId} AND
+		like_yn = 1)
+		<include refid="search" />
+	</select>
+
+<!-- 내가 쓴 글 리스트 조회 -->
+	<select id="findMine"
+		parameterType="com.dish.common.dto.SearchDto"
+		resultType="com.dish.domain.post.PostResponse">
+		SELECT
+		p.id,
+		p.title,
+		p.content,
+		p.writer,
+		p.view_cnt,
+		p.notice_yn,
+		p.delete_yn,
+		p.created_date,
+		p.modified_date,
+		f.created_date
+		AS fileDate,
+		f.save_name,
+		(
+		SELECT COUNT(like_yn)
+		FROM liked
+		WHERE post_id
+		= p.id AND like_yn = 1
+		) AS likeCnt
+		FROM
+		post p
+		LEFT JOIN (
+		SELECT
+		post_id,
+		MIN(id) AS min_id
+		FROM
+		file
+		GROUP BY post_id
+		) AS f_min ON p.id =
+		f_min.post_id
+		LEFT JOIN file f ON
+		f_min.min_id = f.id
+		WHERE
+		p.notice_yn =
+		0
+		<include refid="search" />
+		AND p.delete_yn = 0
+		AND p.writer in (select 
+							login_id
+						from member
+						where id = #{memberId})
+		ORDER BY p.id DESC
+		LIMIT #{pagination.limitStart},
+		#{recordSize}
+	</select>
+	
+	<!--  내가 쓴  게시글 수 카운팅 -->
+	<select id="mineCount"
+		parameterType="com.dish.common.dto.SearchDto" resultType="int">
+		SELECT
+		COUNT(*)
+		FROM
+		post as p
+		WHERE
+		notice_yn = 0 
+		and delete_yn =0 
+		and p.writer 
+				IN (SELECT 
+						login_id 
+					FROM member 
+					WHERE id = #{memberId})
+		<include refid="search" />
+	</select>
+
+
+</mapper>

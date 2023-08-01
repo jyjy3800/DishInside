@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <title>로그인</title>
+    <link rel="stylesheet" th:href="@{/css/default.css}" />
+    <link rel="stylesheet" th:href="@{/css/common.css}" />
+    <link rel="stylesheet" th:href="@{/css/content.css}" />
+    <link rel="stylesheet" th:href="@{/css/button.css}" />
+	<style>
+		#login_box .signup_btn {background:#42d870; border:0; border-bottom:solid 3px #4ed177; border-radius:50px; width:100%; height:52px; line-height:52px; font-size:16px; color:#fff; text-align:center; margin:20px 0 15px;}
+
+
+/* 각 콤보상자에 스타일 적용 */
+select#year, select#month, select#day {
+  font-size: inherit; /* 부모 요소(.combo-box)의 글씨 크기를 상속받음 */
+  width: auto; /* 자동으로 내용에 맞게 너비 조정됨 */
+  padding: 2px 5px; /* 콤보상자 내용과 테두리 간격을 조정 */
+}
+	</style>
+</head>
+
+<body>
+
+	<div id="login_wrap">
+	
+		<div id="login_box">
+			<h2>[[ ${status} ]]</h2>
+			<div class="login_con">
+				<div class="login_tit">
+				
+					<h2>Dish Inside</h2>
+					<p>LOGIN</p>
+					<a  href="post/main.do">홈페이지로 돌아가기</a>
+				</div>
+
+				<div class="login_input">
+					<form id="loginForm" onsubmit="return false;" autocomplete="off">
+						<ul>
+							<li>
+								<label for="loginId" class="skip_info">아이디</label>
+								<input type="text" id="loginId" name="loginId" placeholder="아이디" title="아이디" />
+							</li>
+							<li>
+								<label for="password" class="skip_info">비밀번호</label>
+								<input type="password" id="password" name="password" title="비밀번호" placeholder="비밀번호" />
+							</li>
+						</ul>
+						<button type="button" onclick="login();" class="login_btn">로그인</button>
+						<button type="button" onclick="openSignupPopup();" class="signup_btn">회원가입</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!--/* 회원가입 popup */-->
+	<div id="signupPopup" class="popLayer">
+		<h3>회원가입</h3>
+		<div class="pop_container">
+			<form id="signupForm" onsubmit="return false;" autocomplete="off">
+				<table class="tb tb_row tl">
+					<colgroup>
+						<col style="width:30%;" /><col style="width:70%;" />
+					</colgroup>
+					<tbody>
+						<tr>
+							<th scope="row">아이디<span class="es">필수 입력</span></th>
+							<td>
+								<input type="text" name="loginId" placeholder="아이디" maxlength="20" style="width: 80%;" />
+								<button type="button" id="idCheckBtn" class="btns btn_st5" onclick="checkLoginId();" style="width: 20%; float: right;">중복 확인</button>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row">비밀번호<span class="es">필수 입력</span></th>
+							<td><input type="password" name="password" placeholder="비밀번호" maxlength="30" /></td>
+						</tr>
+						<tr>
+							<th scope="row">비밀번호 재입력<span class="es">필수 입력</span></th>
+							<td><input type="password" name="passwordCheck" placeholder="비밀번호 재입력" maxlength="30" /></td>
+						</tr>
+						<tr>
+							<th scope="row">이름<span class="es">필수 입력</span></th>
+							<td><input type="text" name="name" placeholder="이름" maxlength="10" /></td>
+						</tr>
+						<tr>
+							<th scope="row">성별<span class="es">필수 입력</span></th>
+							<td>
+								<div class="radio_group">
+									<p class="radios">
+										<input type="radio" id="male" name="gender" value="M" checked />
+										<label for="male">남</label><span class="check"></span>
+									</p>
+									<p class="radios">
+										<input type="radio" id="female" name="gender" value="F" />
+										<label for="female">여</label><span class="check"></span>
+									</p>
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row">생년월일<span class="es">필수 입력</span></th>
+							<td>
+							  <select name="year" id="year"></select>년
+							  <select name="month" id="month"></select>월
+							  <select name="day" id="day"></select>일
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</form>
+			<p class="btn_set">
+				<button type="button" class="btns btn_st2" onclick="saveMember();">가입</button>
+				<button type="button" class="btns btn_bdr2" onclick="closeSignupPopup();">취소</button>
+			</p>
+		</div>
+		<button type="button" class="btn_close" onclick="closeSignupPopup();"><span><i class="far fa-times-circle"></i></span></button>
+	</div>
+
+	
+	<script th:src="@{/js/jquery-3.6.0.min.js}"></script>
+	<script src="https://code.jquery.com/jquery-3.6.2.min.js"></script>
+	<script src="https://kit.fontawesome.com/79613ae794.js" crossorigin="anonymous"></script>
+	<script>
+
+		// Enter 로그인 이벤트 바인딩
+		window.onload = () => {
+			 const isLogged = /*[[${session.loginMember != null}]]*/ false;
+
+		        if (isLogged) {
+		            alert("이미 로그인 되어있습니다.");
+		            history.back(); // Redirect to the previous page
+		        }
+			document.querySelectorAll('#loginId, #password').forEach(element => {
+				element.addEventListener('keyup', (e) => {
+					if (e.keyCode === 13) {
+						login();
+					}
+				})
+			})
+			
+		}
+
+		// 날짜 만들기
+		document.addEventListener("DOMContentLoaded", function() {
+		  // 년도 콤보상자 만들기
+		  const yearSelect = document.getElementById("year");
+		  const currentYear = new Date().getFullYear();
+		  const startYear = currentYear - 100; // 100년 전부터 선택 가능
+		  for (let year = currentYear; year >= startYear; year--) {
+		    const option = document.createElement("option");
+		    option.text = year;
+		    option.value = year;
+		    yearSelect.appendChild(option);
+		  }
+
+		  // 월 콤보상자 만들기
+		  const monthSelect = document.getElementById("month");
+		  for (let month = 1; month <= 12; month++) {
+		    const option = document.createElement("option");
+		    option.text = month;
+		    option.value = month;
+		    monthSelect.appendChild(option);
+		  }
+
+		  // 일 콤보상자 만들기
+		  const daySelect = document.getElementById("day");
+		  for (let day = 1; day <= 31; day++) {
+		    const option = document.createElement("option");
+		    option.text = day;
+		    option.value = day;
+		    daySelect.appendChild(option);
+		  }
+		});
+		// 로그인
+		function login() {
+
+			const form = document.getElementById('loginForm');
+
+			if ( !form.loginId.value || !form.password.value ) {
+				alert('아이디와 비밀번호를 모두 입력해 주세요.');
+				form.loginId.focus();
+				return false;
+			}
+
+			$.ajax({
+				url : '/login',
+				type : 'POST',
+				dataType : 'json',
+				data : {
+					loginId: form.loginId.value,
+					password: form.password.value
+				},
+				async : false,
+				success : function (response) {
+					location.href = '/post/main.do';
+				},
+				error : function (request, status, error) {
+					alert('아이디와 비밀번호를 확인해 주세요.');
+				}
+			})
+		}
+
+		function layerPop(popName){
+			var $layer = $("#"+ popName);
+			$layer.fadeIn(500).css('display', 'inline-block').wrap( '<div class="overlay_t"></div>');
+			$('body').css('overflow','hidden');
+		}
+		function layerPopClose(){
+			$(".popLayer").hide().unwrap( '');
+			$('body').css('overflow','auto');
+			$(".popLayer video").each(function() { this.pause(); this.load(); });
+		}
+		// 회원가입 팝업 open
+		function openSignupPopup() {
+			layerPop('signupPopup')
+		}
+
+
+		// 회원가입 팝업 close
+		function closeSignupPopup() {
+			const form = document.getElementById('signupForm');
+			form.loginId.readOnly = false;
+			form.querySelector('#idCheckBtn').disabled = false;
+			form.reset();
+			layerPopClose();
+		}
+
+
+		// 아이디 중복 체크
+		function checkLoginId() {
+			const loginId = document.querySelector('#signupForm input[name="loginId"]');
+			isValid(loginId, '아이디');
+			const count = getJson(`/member-count`, { loginId : loginId.value });
+
+			if (count > 0) {
+				alert('이미 가입된 아이디가 있습니다.');
+				loginId.focus();
+				return false;
+			}
+
+			if (confirm('사용 가능한 아이디입니다.\n입력하신 아이디로 결정하시겠습니까?')) {
+				loginId.readOnly = true;
+				document.getElementById('idCheckBtn').disabled = true;
+			}
+		}
+		/**
+		 * 문자열의 마지막(끝) 문자의 종성 포함 여부 확인
+		 * @param value - Target String
+		 * @returns 종성 포함 여부
+		 */
+		function hasCoda(value) {
+		    return ((value.charCodeAt(value.length - 1) - 0xAC00) % 28) > 0;
+		}
+
+
+		/**
+		 * 필드(Elemenet) 유효성 검사
+		 * @param target - 검사 대상 Element
+		 * @param fieldName - 필드명
+		 * @param focusTarget - 포커스 대상 Element
+		 * @returns 필드 입력(선택) 여부
+		 */
+		function isValid(target, fieldName, focusTarget) {
+		    if (target.value.trim()) {
+		        return true;
+		    }
+
+		    const particle = (hasCoda(fieldName)) ? '을' : '를'; // 조사
+		    const elementType = (target.type === 'text' || target.type === 'password' || target.type === 'search' || target.type === 'textarea') ? '입력' : '선택';
+		    alert( `${fieldName + particle} ${elementType}해 주세요.` );
+
+		    target.value = '';
+		    ( !focusTarget ? target : focusTarget).focus();
+		    throw new Error(`"${target.id}" is required...`)
+		}
+
+
+		/**
+		 * 데이터 조회
+		 * @param uri - API Request URI
+		 * @param params - Parameters
+		 * @returns json - 결과 데이터
+		 */
+		function getJson(uri, params) {
+
+		    let json = {}
+
+		    $.ajax({
+		        url : uri,
+		        type : 'get',
+		        dataType : 'json',
+		        data : params,
+		        async : false,
+		        success : function (response) {
+		            json = response;
+		        },
+		        error : function (request, status, error) {
+		            console.log(error)
+		        }
+		    })
+
+		    return json;
+		}
+
+
+		/**
+		 * 데이터 저장/수정/삭제
+		 * @param uri - API Request URI
+		 * @param method - API Request Method
+		 * @param params - Parameters
+		 * @returns json - 결과 데이터
+		 */
+		 function callApi(uri, method, params) {
+			    return new Promise((resolve, reject) => {
+			        $.ajax({
+			            url: uri,
+			            type: method,
+			            contentType: 'application/json; charset=utf-8',
+			            dataType: 'json',
+			            data: (params) ? JSON.stringify(params) : {},
+			            success: function (response) {
+			                resolve(response);
+			            },
+			            error: function (request, status, error) {
+			                reject(error);
+			            }
+			        });
+			    });
+			}
+
+		// 회원 정보 유효성 검사
+		function validationMemberInfo(form) {
+
+			const fields = form.querySelectorAll('input:not([type="radio"])');
+			const fieldNames = ['아이디', '비밀번호', '비밀번호 재입력', '이름', '생년월일'];
+
+			for (let i = 0, len = fields.length; i < len; i++) {
+				isValid(fields[i], fieldNames[i]);
+			}
+
+			if (form.loginId.readOnly === false) {
+				alert('아이디 중복 체크를 완료해 주세요.');
+				throw new Error();
+			}
+
+			if (form.password.value !== form.passwordCheck.value) {
+				alert('비밀번호가 일치하지 않습니다.');
+				form.passwordCheck.focus();
+				throw new Error();
+			}
+		}
+		// 회원 정보 저장 (회원가입)
+		function saveMember() {
+	    // 1. 필드 유효성 검사
+	    const form = document.getElementById('signupForm');
+	    validationMemberInfo(form);
+	
+	    // 2. 파라미터 세팅
+	    const params = {}
+	    new FormData(form).forEach((value, key) => params[key] = value.trim());	   
+	    
+	    let year = document.getElementById('year').value;
+	    let month = document.getElementById('month').value;
+	    let day = document.getElementById('day').value;
+	    year = year.padStart(4, '0');	
+	    month = month.padStart(2, '0');	
+	    day = day.padStart(2, '0');
+
+	 params['birthday'] = `${year}-${month}-${day}`;
+
+	    
+	    delete params['year'];
+	    delete params['month'];
+	    delete params['day'];
+	    
+	    console.log(params);
+	    // 3. Save API 호출
+	    callApi('/members', 'post', params)
+	        .then((response) => {
+	            // API 호출 성공 시
+	            alert('가입을 축하드립니다!\n로그인 후 서비스를 이용해 주세요.');
+	            closeSignupPopup();
+	        })
+	        .catch((error) => {
+	            // API 호출 실패 시
+	            alert('회원가입에 실패했습니다. 다시 시도해주세요.');
+	            console.error('API 호출 실패:', error);
+	            // Redirect to login.do page
+	            
+	        });
+	}
+	</script>
+</body>
+</html>

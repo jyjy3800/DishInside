@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="layout/basic">
+
+<head>
+  <meta charset="UTF-8">
+ 
+
+</head>
+
+<!-- 타이틀 -->
+<th:block layout:fragment="title">
+  <title>출석체크</title>
+</th:block>
+
+<body>
+  <!-- 콘텐츠 -->
+  <th:block layout:fragment="content">
+    <div class="calendar-container">
+     <h1 id="calendar-month" style="text-align: center; margin-bottom: 2em; margin-top: 3em;">Your Calendar Month</h1>
+<div id="centerRo" style="display: flex; flex-direction: column; align-items: center;">
+  <div id="current-date"></div>
+  <button onclick="check()">출석하기</button>
+</div>
+      <div class="table-container">
+        <table id="calendar">
+          <tbody>
+            <tr>
+              <th>일</th>
+              <th>월</th>
+              <th>화</th>
+              <th>수</th>
+              <th>목</th>
+              <th>금</th>
+              <th>토</th>
+            </tr>
+            <!-- Calendar content will be generated here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </th:block>
+
+  <th:block layout:fragment="script">
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      const currentMonth = today.getMonth() + 1;
+      const currentDay = today.getDate();
+      window.onload = () => {
+        const currentDateElement = document.getElementById('current-date');
+        const currentMonthElemnt = document.getElementById('calendar-month');
+
+        currentDateElement.textContent = `오늘은 ${currentYear}년 ${currentMonth}월 ${currentDay}일 입니다.`;
+        currentMonthElemnt.textContent = `출석 체크 - ${currentYear}년 ${currentMonth}월`;
+        monthCheck();
+      }
+        
+
+      function makeCalendar(list) {
+        $(document).ready(function () {
+          const today = new Date();
+          let currentYear = today.getFullYear();
+          let currentMonth = today.getMonth();
+          const calendarBody = $('#calendar tbody');
+
+          // 월의 첫 날을 가져오는 함수
+          function getFirstDayOfMonth(year, month) {
+            return new Date(year, month, 1);
+          }
+
+          // 월의 마지막 날을 가져오는 함수
+          function getLastDayOfMonth(year, month) {
+            return new Date(year, month + 1, 0);
+          }
+
+          // 달력 생성 함수
+          function generateCalendar(year, month) {
+            calendarBody.empty();
+
+            const firstDay = getFirstDayOfMonth(year, month);
+            const lastDay = getLastDayOfMonth(year, month);
+
+            let currentDate = new Date(firstDay);
+            const startingDay = currentDate.getDay(); // 월의 첫 번째 날의 요일 인덱스
+
+            // 테이블 열 추가
+            for (let i = 0; i < 7; i++) {
+              const tableRow = $('<tr></tr>');
+              calendarBody.append(tableRow);
+            }
+
+            // 요일 레이블 설정
+            const dayLabels = ['일', '월', '화', '수', '목', '금', '토'];
+            const tableRows = calendarBody.find('tr');
+            for (let i = 0; i < dayLabels.length; i++) {
+              const tableCell = $(`<th>${dayLabels[i]}</th>`);
+              tableRows.eq(0).append(tableCell);
+            }
+
+            // 첫 번째 날 이전의 빈 칸 채우기
+            let rowIndex = 1;
+            for (let i = 0; i < startingDay; i++) {
+              tableRows.eq(rowIndex).append(`<td></td>`);
+            }
+
+            
+
+            while (currentDate <= lastDay) {
+              const date = currentDate.toISOString().split('T')[0];
+              const day = currentDate.getDay();
+
+              if (day === 0 && currentDate.getDate() !== 1) {
+                rowIndex++;
+              }
+
+              const tableCell = $(`<td></td>`);
+              const container = $('<div class="date-container"></div>');
+              tableCell.append(container);
+
+              const dateNumber = currentDate.getDate();
+              container.append(`<div>${dateNumber}</div>`);
+
+              // 리스트에 dateNumber와 같은 원소가 있는지 확인하여 이미지를 다르게 처리합니다.
+              if (list.includes(dateNumber)) {
+                const imgPath = 'images/check.jpg'; // 다른 이미지 파일의 경로로 바꿔주세요.
+                const imgTag = `<img src="${imgPath}" alt="Image">`;
+                container.append(imgTag);
+              } else {
+                const imgPath = 'images/noCheck.png'; // 기본 이미지 파일의 경로로 바꿔주세요.
+                const imgTag = `<img src="${imgPath}" alt="Image">`;
+                container.append(imgTag);
+              }
+
+              tableRows.eq(rowIndex).append(tableCell);
+              currentDate.setDate(currentDate.getDate() + 1);
+            }
+          }
+
+          // 최초 로딩 시 달력 생성
+          generateCalendar(currentYear, currentMonth);  
+
+         
+        });
+      }
+      
+     
+      
+      function prepare(){
+    	  let year = currentYear;
+          let month = currentMonth.toString().padStart(2, '0');
+          let day = currentDay.toString().padStart(2, '0');
+          let attendanceDate = `${year}-${month}-${day}`;
+          console.log(attendanceDate);		  
+		   
+		    const memberId = [[${session.loginMember.id}]]
+		    console.log(memberId);
+		    
+		   
+		    const params = {
+		    		"memberId": `${memberId}`,		        
+		        "year": `${year}`,
+		        "month": `${month}`,
+		        "day": `${day}`
+		    }
+		    return params
+    	  
+      }
+       function check() {
+          const params = prepare();
+		    const uri = `/attendant/check`;
+			console.log(params)
+		    // 2. API 통신 후 성공 여부에 따라 처리
+		    callApi(uri, 'post', params)
+		        .then(response => {
+		            // 좋아요 처리가 성공적으로 완료되었을 때	
+		            alert("출석되었습니다.")
+		            location.reload();
+		        })
+		        .catch(error => {
+		            // 좋아요 처리가 실패한 경우, 에러 처리
+		            console.error(error);
+		            alert('출석이 안됩니다 다시 시도하세요.');
+		        });
+		} 
+       function monthCheck(){
+    	   const params = prepare();
+		    const uri = `/attendant/monthcheck`;
+			
+		    // 2. API 통신 후 성공 여부에 따라 처리
+		    callApi(uri, 'post', params)
+		        .then(response => {
+		        	makeCalendar(response)
+		        })
+		        .catch(error => {		           
+		            console.error(error);
+		            alert('출석이 안됩니다 다시 시도하세요.');
+		        });
+       }
+          
+        /*]]>*/
+      </script>
+    </th:block>
+  </body>
+  </html>

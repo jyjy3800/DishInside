@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dish.domain.like.LikeMapper">
+
+
+	<!-- like 테이블 전체 컬럼 -->
+	<sql id="likeColumns">
+		id
+		, post_id
+		, member_id
+		, like_yn
+		, created_date
+		, modified_date
+	</sql>
+	<!-- 좋아요 등록 -->
+	<insert id="like"
+		parameterType="com.dish.domain.like.LikeRequest" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO liked (
+		<include refid="likeColumns" />
+		)VALUES (
+				#{id}
+				, #{postId}
+				, #{memberId}
+				, 1
+				, NOW()
+				, NULL
+				)
+	</insert>
+	<!-- 취소했다가 다시 좋아요 누를때 -->
+	<update id="updateLike"
+		parameterType="com.dish.domain.like.LikeRequest">
+		UPDATE 
+			liked
+		SET
+			  like_yn = 1
+			, modified_date = NOW()
+		WHERE 
+			post_id = #{postId} 
+			AND 
+			member_id = #{memberId}
+	</update>
+	<!-- 좋아요 취소 -->
+	<update id="cancel"
+		parameterType="com.dish.domain.like.LikeRequest">
+		UPDATE 
+			liked
+		SET
+			  like_yn = 0
+			, modified_date = NOW()
+		WHERE 
+			post_id = #{postId} 
+			AND 
+			member_id = #{memberId}
+	</update>
+	<!-- 좋아요 개수 -->
+	<select id="likeCount" parameterType="Long" resultType="int">
+		SELECT 
+			COUNT(*) as like_cnt
+		FROM 
+			liked 
+		WHERE 
+			post_id = #{postId} and like_yn =1
+	</select>
+	
+	<!-- 좋아요 확인 -->
+	<select id="likeCheck" parameterType="com.dish.domain.like.LikeRequest" resultType="int">
+		SELECT 
+			count(like_yn)
+		FROM 
+			liked 
+		WHERE 
+			post_id = #{postId} and member_id = #{memberId}
+	</select>
+	
+</mapper>
